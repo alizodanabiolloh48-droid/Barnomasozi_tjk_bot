@@ -1,0 +1,1 @@
+# Barnomasozi_tjk_bot
