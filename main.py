@@ -6,7 +6,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # ==================== СОЗНОМАҲО (НАСТРОЙКИ) ====================
-BOT_TOKEN = "8842730589:AAFZDmYUR0hzkyrGBDvxYU7tXtcvIUoU_BI"
+BOT_TOKEN "BOT_TOKEN"
 CHANNEL_ID = "@Barnomasozi_tjk"  # Масалан: @my_apps_channel ё ID: -100123456789
 CHANNEL_LINK = "https://t.me/barnomasozitjkkanal"  # Силсилапайванди канал
 # ==============================================================
