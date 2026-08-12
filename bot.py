@@ -8,37 +8,36 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
-# ==================================================
-# НАСТРОЙКА
-# ==================================================
-
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN ёфт нашуд!")
 
+
 CHANNEL_ID = "@barnomasozitjkkanal"
 CHANNEL_LINK = "https://t.me/barnomasozitjkkanal"
+
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 
-# ==================================================
-# DATABASE
-# ==================================================
+# ================= DATABASE =================
 
 def init_db():
+
     conn = sqlite3.connect("bot_files.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            file_id TEXT NOT NULL,
-            file_type TEXT NOT NULL
-        )
+    CREATE TABLE IF NOT EXISTS files(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        file_id TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        message_id INTEGER NOT NULL,
+        channel_id TEXT NOT NULL
+    )
     """)
 
     conn.commit()
@@ -48,12 +47,12 @@ def init_db():
 init_db()
 
 
-# ==================================================
-# САНҶИШИ ОБУНА
-# ==================================================
+# ================= SUBSCRIBE =================
 
-async def check_subscription(user_id: int) -> bool:
+async def check_subscription(user_id):
+
     try:
+
         member = await bot.get_chat_member(
             chat_id=CHANNEL_ID,
             user_id=user_id
@@ -66,37 +65,37 @@ async def check_subscription(user_id: int) -> bool:
         )
 
     except Exception as e:
-        logging.error(f"Subscription error: {e}")
+
+        logging.error(e)
         return False
 
 
-# ==================================================
-# ТУГМАҲО
-# ==================================================
 
 def subscribe_keyboard():
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
+
             [
                 InlineKeyboardButton(
                     text="📢 Обуна шудан",
                     url=CHANNEL_LINK
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     text="✅ Обуна шудам",
                     callback_data="check_sub"
                 )
             ]
+
         ]
     )
 
 
-# ==================================================
-# САБТИ ФАЙЛҲО АЗ КАНАЛ
-# ==================================================
+
+# ================= SAVE FILE =================
 
 @dp.channel_post()
 async def save_channel_file(message: types.Message):
@@ -105,206 +104,204 @@ async def save_channel_file(message: types.Message):
     file_type = None
     file_name = None
 
-    # APK / ZIP / PDF / дигар файлҳо
+
     if message.document:
 
         file_id = message.document.file_id
         file_type = "document"
+        file_name = message.document.file_name
 
-        if message.caption:
-            file_name = message.caption.strip()
-        else:
-            file_name = message.document.file_name
 
-    # Видео
     elif message.video:
 
         file_id = message.video.file_id
         file_type = "video"
+        file_name = "video"
 
-        if message.caption:
-            file_name = message.caption.strip()
-        else:
-            file_name = "video"
 
-    if not file_id or not file_name:
+
+    if not file_id:
         return
 
-    name = file_name.lower().strip()
+
+    name = file_name.lower()
+
 
     conn = sqlite3.connect("bot_files.db")
     cursor = conn.cursor()
 
+
     cursor.execute(
-    """
-    SELECT file_id, file_type, name, message_id, channel_id
-    FROM files
-    WHERE name LIKE ?
-    ORDER BY id DESC
-    """,
-    (f"%{query}%",)
-)
+        """
+        INSERT INTO files
+        (name,file_id,file_type,message_id,channel_id)
+        VALUES(?,?,?,?,?)
+        """,
+        (
             name,
             file_id,
-            file_type
+            file_type,
+            message.message_id,
+            str(message.chat.id)
         )
     )
 
+
     conn.commit()
     conn.close()
+
 
     logging.info(
         f"✅ Файл сабт шуд: {file_name}"
     )
 
 
-# ==================================================
-# /START
-# ==================================================
+
+# ================= START =================
 
 @dp.message(CommandStart())
-async def start_handler(message: types.Message):
+async def start(message: types.Message):
 
-    subscribed = await check_subscription(
+    if not await check_subscription(
         message.from_user.id
-    )
-
-    if not subscribed:
+    ):
 
         await message.answer(
-            "🔒 Барои истифодаи бот аввал ба канали мо обуна шавед.\n\n"
-            "Баъд тугмаи «Обуна шудам»-ро пахш кунед.",
+            "🔒 Аввал ба канал обуна шавед.",
             reply_markup=subscribe_keyboard()
         )
 
         return
 
+
     await message.answer(
         "👋 Салом!\n\n"
-        "🔎 Номи APK ё файлро нависед.\n"
-        "Ман онро аз база меёбам."
+        "🔎 Номи файлро нависед."
     )
 
 
-# ==================================================
-# ТУГМАИ ОБУНА ШУДАМ
-# ==================================================
 
-@dp.callback_query(F.data == "check_sub")
-async def check_subscription_button(
-    callback: types.CallbackQuery
-):
+# ================= CHECK BUTTON =================
 
-    subscribed = await check_subscription(
+@dp.callback_query(F.data=="check_sub")
+async def check_button(callback):
+
+    if await check_subscription(
         callback.from_user.id
-    )
-
-    if subscribed:
+    ):
 
         await callback.message.edit_text(
-            "✅ Обуна тасдиқ шуд!\n\n"
-            "🔎 Акнун номи APK ё файлро нависед."
+            "✅ Обуна тасдиқ шуд.\n\n"
+            "🔎 Номи файлро нависед."
         )
-
-        await callback.answer("✅ Обуна тасдиқ шуд!")
 
     else:
 
         await callback.answer(
-            "❌ Шумо ҳанӯз ба канал обуна нашудаед!",
+            "❌ Ҳоло обуна нестед!",
             show_alert=True
         )
 
 
-# ==================================================
-# ҶУСТУҶӮИ ФАЙЛ
-# ==================================================
+
+# ================= SEARCH =================
 
 @dp.message(F.text)
-async def search_file(message: types.Message):
+async def search(message: types.Message):
 
-    # Аввал subscription
-    subscribed = await check_subscription(
+
+    if not await check_subscription(
         message.from_user.id
-    )
-
-    if not subscribed:
+    ):
 
         await message.answer(
-            "🔒 Бе обуна ба канал бот кор намекунад.",
+            "🔒 Ба канал обуна шавед.",
             reply_markup=subscribe_keyboard()
         )
 
         return
 
-    query = message.text.lower().strip()
 
-    if not query:
-        await message.answer(
-            "🔎 Номи файлро нависед."
-        )
-        return
+
+    query = message.text.lower()
+
+
 
     conn = sqlite3.connect("bot_files.db")
     cursor = conn.cursor()
 
+
     cursor.execute(
         """
-        SELECT file_id, file_type, name
+        SELECT file_id,file_type,name,message_id,channel_id
         FROM files
         WHERE name LIKE ?
         ORDER BY id DESC
         """,
-        (f"%{query}%",)
+        (
+            f"%{query}%",
+        )
     )
+
 
     results = cursor.fetchall()
 
     conn.close()
 
-    # Файл ёфт нашуд
+
+
     if not results:
 
         await message.answer(
-            "❌ Файл ёфт нашуд.\n\n"
-            f"🔎 Ҷустуҷӯ: {query}"
+            "❌ Файл ёфт нашуд."
         )
 
         return
 
-    # Натиҷаҳо
-    await message.answer(
-        f"✅ {len(results)} файл ёфт шуд:"
-    )
 
-    for file_id, file_type, name, message_id, channel_id in results:
+
+    for file_id,file_type,name,message_id,channel_id in results:
+
 
         try:
 
-            if file_type == "document":
+            # санҷиши мавҷуд будани файл дар канал
 
-                await message.answer_document(
-                    document=file_id,
-                    caption=f"📦 {name}"
-                )
-
-            elif file_type == "video":
-
-                await message.answer_video(
-                    video=file_id,
-                    caption=f"🎬 {name}"
-                )
-
-        except Exception as e:
-
-            logging.error(
-                f"Send file error: {e}"
+            await bot.forward_message(
+                chat_id=message.chat.id,
+                from_chat_id=channel_id,
+                message_id=message_id
             )
 
 
-# ==================================================
-# RUN
-# ==================================================
+        except Exception:
+
+
+            conn = sqlite3.connect(
+                "bot_files.db"
+            )
+
+            cursor = conn.cursor()
+
+
+            cursor.execute(
+                "DELETE FROM files WHERE message_id=?",
+                (message_id,)
+            )
+
+
+            conn.commit()
+            conn.close()
+
+
+
+            await message.answer(
+                f"❌ {name} дигар дар канал нест."
+            )
+
+
+
+# ================= RUN =================
 
 async def main():
 
@@ -312,10 +309,12 @@ async def main():
         level=logging.INFO
     )
 
-    print("🤖 Бот фаъол шуд...")
+    print("🤖 Бот фаъол шуд")
 
     await dp.start_polling(bot)
 
 
-if __name__ == "__main__":
+
+if __name__=="__main__":
+
     asyncio.run(main())
