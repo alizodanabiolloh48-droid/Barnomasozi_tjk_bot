@@ -17,7 +17,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN ёфт нашуд!")
 
-CHANNEL_ID = "@Barnomasozi_tjk"
+CHANNEL_ID = "@barnomasozitjkkanal"
 CHANNEL_LINK = "https://t.me/barnomasozitjkkanal"
 
 bot = Bot(token=BOT_TOKEN)
