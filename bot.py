@@ -136,12 +136,14 @@ async def save_channel_file(message: types.Message):
     cursor = conn.cursor()
 
     cursor.execute(
-        """
-        INSERT INTO files
-        (name, file_id, file_type)
-        VALUES (?, ?, ?)
-        """,
-        (
+    """
+    SELECT file_id, file_type, name, message_id, channel_id
+    FROM files
+    WHERE name LIKE ?
+    ORDER BY id DESC
+    """,
+    (f"%{query}%",)
+)
             name,
             file_id,
             file_type
@@ -275,7 +277,7 @@ async def search_file(message: types.Message):
         f"✅ {len(results)} файл ёфт шуд:"
     )
 
-    for file_id, file_type, name in results:
+    for file_id, file_type, name, message_id, channel_id in results:
 
         try:
 
