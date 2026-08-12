@@ -14,8 +14,8 @@ if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN ёфт нашуд!")
 
 
-CHANNEL_ID = "@+lKazdnVFTGhjYmY6"
-CHANNEL_LINK = "https://t.me/+lKazdnVFTGhjYmY6"
+CHANNEL_ID = "@barnomasozitjkkanal"
+CHANNEL_LINK = "https://t.me/barnomasozitjkkanal"
 
 
 bot = Bot(token=BOT_TOKEN)
